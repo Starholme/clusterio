@@ -14,6 +14,13 @@ import {
 	ExportFromInstanceEvent
 } from "./messages";
 
+type InstanceInformation = {
+	name: string,
+	instanceId: number,
+	status: string,
+	port: number
+}
+
 export class ControllerPlugin extends BaseControllerPlugin {
 	subscribedControlLinks!: Set<ControlConnection>;
 
@@ -23,13 +30,13 @@ export class ControllerPlugin extends BaseControllerPlugin {
 		this.controller.handle(ExportFromInstanceEvent, this.handleExportFromInstanceEvent.bind(this));
 
 		this.controller.app.get("/api/nauvis_trading_corporation/instances", (req: Request, res: Response) => {
-			let servers: string[] = [];
+			let servers: InstanceInformation[] = [];
 			for (let instance of this.controller.instances.values()) {
 				let name = instance.config.get("factorio.settings")["name"] as string
-				let id = instance.id
+				let instanceId = instance.id
 				let status = instance.status
-				let port = instance.gamePort
-				servers.push(name + "|" + id + "|" + status + "|" + port);
+				let port = instance.gamePort || 0
+				servers.push({name, instanceId, status, port});
 			}
 			res.send(servers);
 		});
