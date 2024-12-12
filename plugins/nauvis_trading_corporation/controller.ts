@@ -1,4 +1,5 @@
 import { BaseControllerPlugin, type ControlConnection } from "@clusterio/controller";
+import type { Application, Request, Response } from "express";
 
 import fs from "fs-extra";
 import path from "path";
@@ -20,11 +21,32 @@ export class ControllerPlugin extends BaseControllerPlugin {
 		this.subscribedControlLinks = new Set();
 
 		this.controller.handle(ExportFromInstanceEvent, this.handleExportFromInstanceEvent.bind(this));
+
+		this.controller.app.get("/api/nauvis_trading_corporation/instances", (req: Request, res: Response) => {
+			let servers: string[] = [];
+			for (let instance of this.controller.instances.values()) {
+				let name = instance.config.get("factorio.settings")["name"] as string
+				let id = instance.id
+				let status = instance.status
+				let port = instance.gamePort
+				servers.push(name + "|" + id + "|" + status + "|" + port);
+			}
+			res.send(servers);
+		});
+		
+		this.controller.app.get("/api/nauvis_trading_corporation/startInstance", (req: Request<{},{},{},{id:string}>, res: Response) => {
+			try {
+				this.controller.sendTo({instanceId: parseInt(req.query.id)}, new lib.InstanceStartRequest(undefined))
+			} catch (error) {
+				res.send(error);
+			}
+			res.send("Starting");
+		});
 	}
 	
 	async handleExportFromInstanceEvent(request: ExportFromInstanceEvent, src: lib.Address){
 		let instanceId = src.id;
-		
+
 		if (this.controller.config.get("nauvis_trading_corporation.log_item_transfers")) {
 			this.logger.verbose(
 				`Imported the following from ${instanceId}:\n${JSON.stringify(request.items)}`
@@ -37,6 +59,8 @@ export class ControllerPlugin extends BaseControllerPlugin {
 			this.subscribedControlLinks.delete(connection);
 		}
 	}
+
+
 
 	async onShutdown() {
 		
