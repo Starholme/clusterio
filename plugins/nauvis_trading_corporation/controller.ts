@@ -21,6 +21,13 @@ type InstanceInformation = {
 	port: number
 }
 
+type InstanceItems = {
+	instanceId: number,
+	items: Item[]
+}
+
+let _itemsForExport:InstanceItems[] = [];
+
 export class ControllerPlugin extends BaseControllerPlugin {
 	subscribedControlLinks!: Set<ControlConnection>;
 
@@ -42,12 +49,25 @@ export class ControllerPlugin extends BaseControllerPlugin {
 		});
 		
 		this.controller.app.get("/api/nauvis_trading_corporation/startInstance", (req: Request<{},{},{},{id:string}>, res: Response) => {
+			//TODO: Check the status before trying to start.
 			try {
 				this.controller.sendTo({instanceId: parseInt(req.query.id)}, new lib.InstanceStartRequest(undefined))
 			} catch (error) {
 				res.send(error);
 			}
 			res.send("Starting");
+		});
+
+		this.controller.app.get("/api/nauvis_trading_corporation/getExportsFromInstances", (req: Request, res: Response)=>{
+			let poppedItems:InstanceItems[] = [];
+
+			let pop = _itemsForExport.pop();
+			while(pop !== undefined){
+				poppedItems.push(pop);
+				pop = _itemsForExport.pop();
+			}
+
+			res.send(poppedItems);
 		});
 	}
 	
@@ -59,6 +79,8 @@ export class ControllerPlugin extends BaseControllerPlugin {
 				`Imported the following from ${instanceId}:\n${JSON.stringify(request.items)}`
 			);
 		}
+
+		_itemsForExport.push({instanceId, items: request.items})
 	}
 
 	onControlConnectionEvent(connection: ControlConnection, event: string) {
