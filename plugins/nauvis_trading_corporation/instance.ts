@@ -3,6 +3,7 @@ import { BaseInstancePlugin } from "@clusterio/host";
 
 import {
 	ExportFromInstanceEvent,
+	ImportRequestFromInstanceEvent,
 	Item,
 } from "./messages";
 
@@ -24,6 +25,9 @@ export class InstancePlugin extends BaseInstancePlugin {
 		this.pendingTasks = new Set();
 		this.instance.server.on("ipc-nauvis_trading_corporation:exportFromInstance", (output: IpcItems) => {
 			this.exportFromInstance(output).catch(err => this.unexpectedError(err));
+		});
+		this.instance.server.on("ipc-nauvis_trading_corporation:importRequestFromInstance", (output: IpcItems) => {
+			this.importRequestFromInstance(output).catch(err => this.unexpectedError(err));
 		});
 	}
 
@@ -66,6 +70,29 @@ export class InstancePlugin extends BaseInstancePlugin {
 
 		if (this.instance.config.get("nauvis_trading_corporation.log_item_transfers")) {
 			this.logger.verbose("Exported the following to controller:");
+			this.logger.verbose(JSON.stringify(items));
+		}
+	}
+
+	async importRequestFromInstance(items: IpcItems) {
+		this.logger.verbose("Exported the following to controller:");
+		this.logger.verbose(JSON.stringify(items));
+		if (!this.host.connector.hasSession) {
+			// For now the items are voided if the controller connection is
+			// down, which is no different from the previous behaviour.
+			if (this.instance.config.get("nauvis_trading_corporation.log_item_transfers")) {
+				this.logger.verbose("Voided the following items:");
+				this.logger.verbose(JSON.stringify(items));
+			}
+			return;
+		}
+
+
+		const fromIpcItems = items.map(item => new Item(item[0], item[1]));
+		this.instance.sendTo("controller", new ImportRequestFromInstanceEvent(fromIpcItems));
+
+		if (this.instance.config.get("nauvis_trading_corporation.log_item_transfers")) {
+			this.logger.verbose("Import requested the following to controller:");
 			this.logger.verbose(JSON.stringify(items));
 		}
 	}

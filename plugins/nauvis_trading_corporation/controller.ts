@@ -27,6 +27,7 @@ type InstanceItems = {
 }
 
 let _itemsForExport:InstanceItems[] = [];
+let _itemsForImport:InstanceItems[] = [];
 
 export class ControllerPlugin extends BaseControllerPlugin {
 	subscribedControlLinks!: Set<ControlConnection>;
@@ -35,6 +36,7 @@ export class ControllerPlugin extends BaseControllerPlugin {
 		this.subscribedControlLinks = new Set();
 
 		this.controller.handle(ExportFromInstanceEvent, this.handleExportFromInstanceEvent.bind(this));
+		this.controller.handle(ImportRequestFromInstanceEvent, this.handleImportRequestFromInstanceEvent.bind(this));
 
 		this.controller.app.get("/api/nauvis_trading_corporation/instances", (req: Request, res: Response) => {
 			let servers: InstanceInformation[] = [];
@@ -69,6 +71,27 @@ export class ControllerPlugin extends BaseControllerPlugin {
 
 			res.send(poppedItems);
 		});
+
+		this.controller.app.get("/api/nauvis_trading_corporation/getImportRequestsFromInstances", (req: Request, res: Response)=>{
+			let poppedItems:InstanceItems[] = [];
+
+			let pop = _itemsForImport.pop();
+			while(pop !== undefined){
+				poppedItems.push(pop);
+				pop = _itemsForImport.pop();
+			}
+
+			res.send(poppedItems);
+		});
+
+		this.controller.app.post(
+			"/api/nauvis_trading_corporation/setActualImportsForInstances",
+			express.json(),
+			(req: Request, res: Response, next: any) => {
+				this.handleSetActualImportsForInstances(req, res).catch(next);
+			}
+		);
+	}
 	}
 	
 	async handleExportFromInstanceEvent(request: ExportFromInstanceEvent, src: lib.Address){
@@ -81,6 +104,18 @@ export class ControllerPlugin extends BaseControllerPlugin {
 		}
 
 		_itemsForExport.push({instanceId, items: request.items})
+	}
+
+	async handleImportRequestFromInstanceEvent(request: ImportRequestFromInstanceEvent, src: lib.Address){
+		let instanceId = src.id;
+
+		if (this.controller.config.get("nauvis_trading_corporation.log_item_transfers")) {
+			this.logger.verbose(
+				`Imported request from ${instanceId}:\n${JSON.stringify(request.items)}`
+			);
+		}
+
+		_itemsForImport.push({instanceId, items: request.items})
 	}
 
 	onControlConnectionEvent(connection: ControlConnection, event: string) {

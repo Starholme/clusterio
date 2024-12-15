@@ -44,3 +44,24 @@ export class ExportFromInstanceEvent {
 		return new this(json.items.map(item => Item.fromJSON(item)));
 	}
 }
+
+export class ImportRequestFromInstanceEvent {
+	declare ["constructor"]: typeof ImportRequestFromInstanceEvent;
+	static type = "event" as const;
+	static src = "instance" as const;
+	static dst = "controller" as const;
+	static plugin = "nauvis_trading_corporation" as const;
+
+	constructor(
+		public items: Item[]
+	) {
+	}
+
+	static jsonSchema = Type.Object({
+		"items": Type.Array(Item.jsonSchema),
+	});
+
+	static fromJSON(json: Static<typeof ImportRequestFromInstanceEvent.jsonSchema>): ImportRequestFromInstanceEvent {
+		return new this(json.items.map(item => Item.fromJSON(item)));
+	}
+}

@@ -42,7 +42,8 @@ export const plugin: lib.PluginDeclaration = {
 	},
 
 	messages: [
-		messages.ExportFromInstanceEvent
+		messages.ExportFromInstanceEvent,
+		messages.ImportRequestFromInstanceEvent
 	],
 	webEntrypoint: "./web",
 	routes: ["/ntc"],
