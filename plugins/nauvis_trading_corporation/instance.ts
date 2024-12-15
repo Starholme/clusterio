@@ -4,6 +4,7 @@ import { BaseInstancePlugin } from "@clusterio/host";
 import {
 	ExportFromInstanceEvent,
 	ImportRequestFromInstanceEvent,
+	SetActualImportFromInstanceEvent,
 	Item,
 } from "./messages";
 
@@ -29,6 +30,8 @@ export class InstancePlugin extends BaseInstancePlugin {
 		this.instance.server.on("ipc-nauvis_trading_corporation:importRequestFromInstance", (output: IpcItems) => {
 			this.importRequestFromInstance(output).catch(err => this.unexpectedError(err));
 		});
+
+		this.instance.handle(SetActualImportFromInstanceEvent, this.handleSetActualImportFromInstanceEvent.bind(this));
 	}
 
 	async onStart() {
@@ -95,5 +98,21 @@ export class InstancePlugin extends BaseInstancePlugin {
 			this.logger.verbose("Import requested the following to controller:");
 			this.logger.verbose(JSON.stringify(items));
 		}
+	}
+
+	async handleSetActualImportFromInstanceEvent(event: SetActualImportFromInstanceEvent){
+		this.logger.verbose(
+			`Firing handleSetActualImportsForInstances on instance`
+		);
+		let itemsJson = lib.escapeString(JSON.stringify(event.items));
+		let task = this.sendRcon(`/sc __nauvis_trading_corporation__ storage.imported = "${itemsJson}"`, true);
+		this.pendingTasks.add(task);
+		let task2 = this.sendRcon(`/sc __nauvis_trading_corporation__ storage.collectImports = true`, true);
+		this.pendingTasks.add(task2);
+		await task.finally(() => { this.pendingTasks.delete(task); });
+		await task2.finally(() => { this.pendingTasks.delete(task2); });
+		this.logger.verbose(
+			`Done handleSetActualImportsForInstances on instance`
+		);
 	}
 }

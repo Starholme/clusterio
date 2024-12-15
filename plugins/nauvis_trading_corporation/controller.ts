@@ -1,5 +1,5 @@
 import { BaseControllerPlugin, type ControlConnection } from "@clusterio/controller";
-import type { Application, Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 
 import fs from "fs-extra";
 import path from "path";
@@ -11,7 +11,9 @@ import * as routes from "./routes";
 
 import {
 	Item,
-	ExportFromInstanceEvent
+	ExportFromInstanceEvent,
+	ImportRequestFromInstanceEvent,
+	SetActualImportFromInstanceEvent
 } from "./messages";
 
 type InstanceInformation = {
@@ -92,8 +94,33 @@ export class ControllerPlugin extends BaseControllerPlugin {
 			}
 		);
 	}
-	}
 	
+	async handleSetActualImportsForInstances(req: Request, res: Response){
+		let body = req.body;
+		for (const instanceId in body){
+			const value = body[instanceId]
+			let itemList : Item[] = [];
+			for (const name in value.items){
+				const count = value.items[name];
+				this.logger.verbose(`test ${instanceId} ${name} ${count}`);
+				itemList.push(new Item(name, count))
+			}
+			
+			this.logger.verbose(
+				`Firing handleSetActualImportsForInstances`
+			);
+
+			let setEvent = new SetActualImportFromInstanceEvent(itemList);
+			this.controller.sendTo({instanceId: parseInt(instanceId)}, setEvent)
+
+			this.logger.verbose(
+				`Done handleSetActualImportsForInstances`
+			);
+
+		}
+		res.send("Ok");
+	}
+
 	async handleExportFromInstanceEvent(request: ExportFromInstanceEvent, src: lib.Address){
 		let instanceId = src.id;
 

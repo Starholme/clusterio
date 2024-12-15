@@ -65,3 +65,24 @@ export class ImportRequestFromInstanceEvent {
 		return new this(json.items.map(item => Item.fromJSON(item)));
 	}
 }
+
+export class SetActualImportFromInstanceEvent {
+	declare ["constructor"]: typeof SetActualImportFromInstanceEvent;
+	static type = "event" as const;
+	static src = "controller" as const;
+	static dst = "instance" as const;
+	static plugin = "nauvis_trading_corporation" as const;
+
+	constructor(
+		public items: Item[]
+	) {
+	}
+
+	static jsonSchema = Type.Object({
+		"items": Type.Array(Item.jsonSchema),
+	});
+
+	static fromJSON(json: Static<typeof SetActualImportFromInstanceEvent.jsonSchema>): SetActualImportFromInstanceEvent {
+		return new this(json.items.map(item => Item.fromJSON(item)));
+	}
+}
